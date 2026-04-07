@@ -2,6 +2,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseClient: SupabaseClient | null = null;
 
+export const STORAGE_BUCKET = 'images';
+
 export function getSupabase(): SupabaseClient | null {
   if (!supabaseClient) {
     // @ts-ignore

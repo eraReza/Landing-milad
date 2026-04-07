@@ -1,5 +1,12 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  BrowserRouter as Router, 
+  Routes, 
+  Route, 
+  useNavigate,
+  Link
+} from 'react-router-dom';
 import { 
   Instagram, 
   MessageCircle, 
@@ -14,12 +21,14 @@ import {
   Save,
   Wifi,
   WifiOff,
-  Loader2
+  Loader2,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import Countdown from 'react-countdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { getSupabase } from './lib/supabase';
+import { getSupabase, STORAGE_BUCKET } from './lib/supabase';
 import { CMSContent, DEFAULT_CMS_CONTENT } from './types';
 
 // Utility for tailwind classes
@@ -29,7 +38,7 @@ function cn(...inputs: ClassValue[]) {
 
 // --- Components ---
 
-const Navbar = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => (
+const Navbar = () => (
   <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-honey-100">
     <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -39,13 +48,6 @@ const Navbar = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => (
         <span className="font-display font-bold text-honey-900 hidden sm:block">Donat Madu Cihanjuang</span>
       </div>
       <div className="flex items-center gap-4">
-        <button 
-          onClick={onOpenAdmin}
-          className="p-2 text-honey-400 hover:text-honey-600 transition-colors"
-          title="Admin Settings"
-        >
-          <Settings size={20} />
-        </button>
         <a 
           href="#promo" 
           className="bg-honey-500 text-white px-4 py-2 rounded-full font-medium text-sm hover:bg-honey-600 transition-all shadow-lg shadow-honey-200"
@@ -474,10 +476,47 @@ const AdminPanel = ({
 }) => {
   const [formData, setFormData] = useState<CMSContent>(content);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, fieldName: keyof CMSContent) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      alert('Supabase not configured for uploads');
+      return;
+    }
+
+    setUploadingField(fieldName);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, [fieldName]: publicUrl }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Gagal mengupload gambar. Pastikan bucket "images" sudah dibuat di Supabase Storage.');
+    } finally {
+      setUploadingField(null);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -486,18 +525,50 @@ const AdminPanel = ({
     await onSave(formData);
     setIsSaving(false);
     onClose();
+    navigate('/');
   };
 
+  const ImageUploadField = ({ label, name, value }: { label: string, name: keyof CMSContent, value: string }) => (
+    <div className="space-y-2">
+      <label className="block text-sm font-bold text-honey-600">{label}</label>
+      <div className="flex flex-col gap-3">
+        {value && (
+          <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-honey-200">
+            <img src={value} alt={label} className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input 
+            name={name} 
+            value={value} 
+            onChange={handleChange}
+            placeholder="URL Gambar..."
+            className="flex-1 p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none text-sm"
+          />
+          <label className="cursor-pointer bg-honey-100 hover:bg-honey-200 text-honey-600 p-3 rounded-xl transition-colors flex items-center justify-center shrink-0">
+            {uploadingField === name ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <Upload size={20} />
+            )}
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={(e) => handleFileUpload(e, name)}
+              disabled={!!uploadingField}
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-    >
+    <div className="min-h-screen bg-honey-50 flex items-center justify-center p-4">
       <motion.div 
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
         className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
       >
         <div className="p-6 border-b flex items-center justify-between bg-honey-50">
@@ -505,7 +576,7 @@ const AdminPanel = ({
             <Settings className="text-honey-500" />
             CMS Admin Panel
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-honey-100 rounded-full transition-colors">
+          <button onClick={() => { onClose(); navigate('/'); }} className="p-2 hover:bg-honey-100 rounded-full transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -533,15 +604,7 @@ const AdminPanel = ({
                   className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-honey-600 mb-1">Hero Image URL</label>
-                <input 
-                  name="hero_image" 
-                  value={formData.hero_image} 
-                  onChange={handleChange}
-                  className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
-                />
-              </div>
+              <ImageUploadField label="Hero Image" name="hero_image" value={formData.hero_image} />
             </div>
 
             <div className="space-y-4">
@@ -564,15 +627,7 @@ const AdminPanel = ({
                   className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-honey-600 mb-1">Promo Image URL</label>
-                <input 
-                  name="promo_image" 
-                  value={formData.promo_image} 
-                  onChange={handleChange}
-                  className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
-                />
-              </div>
+              <ImageUploadField label="Promo Image" name="promo_image" value={formData.promo_image} />
             </div>
 
             <div className="space-y-4">
@@ -654,15 +709,7 @@ const AdminPanel = ({
                     className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-honey-600 mb-1">Popup Image URL</label>
-                  <input 
-                    name="popup_image" 
-                    value={formData.popup_image} 
-                    onChange={handleChange}
-                    className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
-                  />
-                </div>
+                <ImageUploadField label="Popup Image" name="popup_image" value={formData.popup_image} />
                 <div>
                   <label className="block text-sm font-bold text-honey-600 mb-1">Popup CTA Text</label>
                   <input 
@@ -679,21 +726,21 @@ const AdminPanel = ({
 
         <div className="p-6 border-t bg-honey-50 flex justify-end gap-4">
           <button 
-            onClick={onClose}
+            onClick={() => { onClose(); navigate('/'); }}
             className="px-6 py-3 rounded-xl font-bold text-honey-600 hover:bg-honey-100 transition-colors"
           >
             Cancel
           </button>
           <button 
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || !!uploadingField}
             className="flex items-center gap-2 bg-honey-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-honey-600 transition-all shadow-lg disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : <><Save size={20} /> Save Changes</>}
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -798,35 +845,38 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen selection:bg-honey-200 selection:text-honey-900">
-      <Navbar onOpenAdmin={() => setIsAdminOpen(true)} />
-      
-      <main>
-        <Hero content={content} />
-        <PromoSection content={content} />
-        <StorySection content={content} />
-        <CountdownSection content={content} />
-        <FinalCTA content={content} />
-      </main>
-
-      <Footer content={content} />
-      <StickyWA link={content.whatsapp_link} />
-
-      <AnimatePresence>
-        {isPopupOpen && (
-          <PromoPopup 
-            content={content} 
-            onClose={() => setIsPopupOpen(false)} 
-          />
-        )}
-        {isAdminOpen && (
-          <AdminPanel 
-            content={content} 
-            onSave={handleSave} 
-            onClose={() => setIsAdminOpen(false)} 
-          />
-        )}
-      </AnimatePresence>
-    </div>
+    <Router>
+      <div className="min-h-screen bg-white font-sans text-honey-900 selection:bg-honey-200 selection:text-honey-900">
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Navbar />
+              <Hero content={content} />
+              <PromoSection content={content} />
+              <StorySection content={content} />
+              <CountdownSection content={content} />
+              <FinalCTA content={content} />
+              <Footer content={content} />
+              <StickyWA link={content.whatsapp_link} />
+              <AnimatePresence>
+                {isPopupOpen && (
+                  <PromoPopup 
+                    content={content} 
+                    onClose={() => setIsPopupOpen(false)} 
+                  />
+                )}
+              </AnimatePresence>
+            </>
+          } />
+          <Route path="/rezaedit" element={
+            <AdminPanel 
+              content={content} 
+              onSave={handleSave} 
+              onClose={() => setIsAdminOpen(false)} 
+            />
+          } />
+        </Routes>
+      </div>
+    </Router>
   );
 }

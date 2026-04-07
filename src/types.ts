@@ -13,6 +13,7 @@ export interface CMSContent {
   whatsapp_link: string;
   instagram_link: string;
   footer_description: string;
+  logo_url: string;
   // New Popup Fields
   popup_active: boolean;
   popup_image: string;
@@ -36,6 +37,7 @@ export const DEFAULT_CMS_CONTENT: CMSContent = {
   whatsapp_link: "https://wa.me/yournumber",
   instagram_link: "https://instagram.com/donatmaducihanjuang",
   footer_description: "Donat Madu Cihanjuang - Manisnya Madu, Lembutnya Donat. Menemani setiap momen bahagiamu sejak 2010.",
+  logo_url: "https://layioacwhobymaqrrnay.supabase.co/storage/v1/object/public/images/logo-dmc.png",
   // New Popup Defaults
   popup_active: true,
   popup_image: "https://images.unsplash.com/photo-1612240498936-65f5101365d2?q=80&w=800&auto=format&fit=crop",

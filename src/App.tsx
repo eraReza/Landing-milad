@@ -38,15 +38,18 @@ function cn(...inputs: ClassValue[]) {
 
 // --- Components ---
 
-const Navbar = () => (
+const Navbar = ({ content }: { content: CMSContent }) => (
   <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-honey-100">
     <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-honey-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
-          D
-        </div>
-        <span className="font-display font-bold text-honey-900 hidden sm:block">Donat Madu Cihanjuang</span>
-      </div>
+      <Link to="/" className="flex items-center gap-2">
+        {content.logo_url ? (
+          <img src={content.logo_url} alt="Logo" className="h-10 w-auto object-contain" />
+        ) : (
+          <div className="w-10 h-10 bg-honey-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+            D
+          </div>
+        )}
+      </Link>
       <div className="flex items-center gap-4">
         <a 
           href="#promo" 
@@ -411,10 +414,16 @@ const Footer = ({ content }: { content: CMSContent }) => (
     <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-12">
       <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <div className="w-12 h-12 bg-honey-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
-            D
-          </div>
-          <span className="font-display font-bold text-2xl text-honey-900">DMC</span>
+          {content.logo_url ? (
+            <img src={content.logo_url} alt="Logo" className="h-12 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="w-12 h-12 bg-honey-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                D
+              </div>
+              <span className="font-display font-bold text-2xl text-honey-900">DMC</span>
+            </>
+          )}
         </div>
         <p className="text-honey-600 leading-relaxed">
           {content.footer_description}
@@ -583,6 +592,27 @@ const AdminPanel = ({
         
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8">
           <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-4 md:col-span-2">
+              <h3 className="font-bold text-honey-800 border-b pb-2">Brand Settings</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <ImageUploadField 
+                  label="Logo Brand (Rekomendasi: 200x80px atau aspek rasio 5:2)" 
+                  name="logo_url" 
+                  value={formData.logo_url} 
+                />
+                <div>
+                  <label className="block text-sm font-bold text-honey-600 mb-1">Footer Description</label>
+                  <textarea 
+                    name="footer_description" 
+                    value={formData.footer_description} 
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full p-3 bg-honey-50 border border-honey-200 rounded-xl focus:ring-2 focus:ring-honey-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <h3 className="font-bold text-honey-800 border-b pb-2">Hero Section</h3>
               <div>
@@ -850,7 +880,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={
             <>
-              <Navbar />
+              <Navbar content={content} />
               <Hero content={content} />
               <PromoSection content={content} />
               <StorySection content={content} />

@@ -506,20 +506,25 @@ const AdminPanel = ({
     setUploadingField(fieldName);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+      const filePath = fileName;
 
       const { error: uploadError } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data } = supabase.storage
         .from(STORAGE_BUCKET)
         .getPublicUrl(filePath);
 
-      setFormData(prev => ({ ...prev, [fieldName]: publicUrl }));
+      if (!data.publicUrl) throw new Error('Could not get public URL');
+
+      setFormData(prev => ({ ...prev, [fieldName]: data.publicUrl }));
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Gagal mengupload gambar. Pastikan bucket "images" sudah dibuat di Supabase Storage.');

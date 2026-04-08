@@ -153,7 +153,7 @@ const Hero = ({ content }: { content: CMSContent }) => {
           transition={{ delay: 2.2, duration: 1, type: "spring" }}
           className="relative hidden lg:block"
         >
-          <div className="relative z-10 rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white">
+          <div className="relative z-10 rounded-[2rem] overflow-hidden">
             <img 
               src={content.hero_image} 
               alt="Donat Madu Cihanjuang" 
@@ -256,7 +256,7 @@ const PromoSection = ({ content }: { content: CMSContent }) => (
                 <Calendar size={20} />
               </div>
               <div>
-                <p className="text-[10px] sm:text-xs text-honey-500 font-bold uppercase">Periode</p>
+                <p className="text-[10px] sm:text-xs text-honey-500 font-bold uppercase">Berlaku pada</p>
                 <p className="text-sm sm:text-base font-bold text-honey-800">{content.promo_period}</p>
               </div>
             </div>
@@ -282,7 +282,7 @@ const PromoSection = ({ content }: { content: CMSContent }) => (
           viewport={{ once: true }}
           className="relative group"
         >
-          <div className="rounded-3xl overflow-hidden shadow-xl group-hover:scale-[1.02] transition-transform duration-500">
+          <div className="rounded-3xl overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
             <img 
               src={content.promo_image} 
               alt="Promo Donat Isi 6" 
